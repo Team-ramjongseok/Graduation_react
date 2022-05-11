@@ -2,20 +2,57 @@ import logo from './logo.svg';
 import './App.css';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { io } from 'socket.io-client';
+import { Howl } from 'howler';
+import EffectSound from './orderEffect.mp3';
+
+function effectSound(src, volume = 1) {
+  let sound;
+  const soundInject = (src) => {
+      sound = new Howl({ src });
+      sound.volume(volume);
+  }
+  soundInject(src);
+  return sound;
+}
+const es = effectSound(EffectSound, 0.3); 
+
 
 const url = 'http://localhost:8001';
+const cafeId = 1;
 
 
+
+const socket = io("http://localhost:8001");
+
+
+
+socket.emit("reply", "cafeId="+cafeId);
 
 function App() {
-
-  const cafeId = 1;
   
   const [cafeMenu, setCafeMenu] = useState([]);
   const [title, setTitle] = useState("카페번호 : " + cafeId);
   const [orderStatus, setOrderStatus] = useState([1,2,1]);
+  const [endpointStatus, setEndpointStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  console.log("endpointStatus === ",endpointStatus);
+
+  useEffect(()=> { // 1번만 실행
+    console.log("1번만 실행, socket에 register");
+    socket.on("cafeId="+cafeId, (data) => {
+      es.play();
+      console.log("endpointStatus1 === ", endpointStatus);
+      changeBtnColor(2);
+      setTitle('접수대기');
+
+      fetchCafe('/cafe/payments/check')
+      // fetchCafe(endpointStatus);
+      // console.log(data);
+    })
+  }, []);
 
   function changeBtnColor(index) {
     if(index === 0) {
@@ -34,6 +71,7 @@ function App() {
 
   async function fetchCafe(endpoint) {
 
+    console.log("endpointStatus2 === ",endpointStatus);
     if(!endpoint) return;
     try {
       const response = await axios.get(
@@ -42,7 +80,9 @@ function App() {
       
       console.log("endpoint ===", endpoint);
       let lis = [];
-      for(let i=0; i< response.data.length; i++){
+      
+      for(let i= response.data.length-1 ; i >= 0; i--){ // 내림차순
+      // for(let i=0; i< response.data.length; i++){ // 오름차순
         let json = response.data[i];
         console.log("jsondata =====", json);
         const checklist1 = ['id', 'order_time', 'amount', 'order_status', 'memo'];
@@ -105,8 +145,10 @@ function App() {
       }
       
       
-
+      
       setCafeMenu(lis);
+      console.log("endpoint === ", endpoint);
+      setEndpointStatus(endpoint);
       console.log("cafemenu1", cafeMenu);
     } catch (err) {
       console.error(err);
