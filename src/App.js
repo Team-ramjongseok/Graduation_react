@@ -18,7 +18,9 @@ function effectSound(src, volume = 1) {
 const es = effectSound(EffectSound, 0.3); 
 
 
+
 const url = 'http://localhost:8001';
+
 const cafeId = 1;
 
 
@@ -34,17 +36,21 @@ function App() {
   const [cafeMenu, setCafeMenu] = useState([]);
   const [title, setTitle] = useState("카페번호 : " + cafeId);
   const [orderStatus, setOrderStatus] = useState([1,2,1]);
-  const [endpointStatus, setEndpointStatus] = useState('');
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  console.log("endpointStatus === ",endpointStatus);
+  let endpoint_ = "";
+
+  
 
   useEffect(()=> { // 1번만 실행
     console.log("1번만 실행, socket에 register");
+    getStatus();
     socket.on("cafeId="+cafeId, (data) => {
       es.play();
-      console.log("endpointStatus1 === ", endpointStatus);
+      
+      console.log("endpoint_ ===", endpoint_);
       changeBtnColor(2);
       setTitle('접수대기');
 
@@ -69,9 +75,57 @@ function App() {
     }
   }
 
+
+  async function postCafe(endpoint, data) {
+    
+
+    
+    console.log("endpoint_ ===", endpoint_);
+    console.log("=== data === \n", data);
+
+    await axios.post(url + endpoint, data)
+      .then((response) => {
+        console.log(response);
+        setTimeout(fetchCafe, 100, endpoint_);
+      })
+      .catch((err) => {
+        console.error(err);
+      })
+    
+  }
+
+  
+  async function getStatus() {
+    try {
+      const response = await axios.get(
+        url + '/cafe/payments/status', {params: {cafeId : cafeId}}
+      );
+
+      console.log("==========Response==========\n\n", response.data[0], response.data[1]);
+      let tmpArr = [0, 0, 0];
+      for(var i =0; i< 3; i++){
+        if(response.data[i].order_status === 'CHECK') {
+          tmpArr[0] = response.data[i].count;
+        } else if (response.data[i].order_status === 'READY'){
+          tmpArr[1] = response.data[i].count;
+        } else {
+          tmpArr[2] = response.data[i].count;
+        }
+      }
+      setOrderStatus(tmpArr);
+
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  
+
   async function fetchCafe(endpoint) {
 
-    console.log("endpointStatus2 === ",endpointStatus);
+    
+    console.log("endpoint_ ===", endpoint_);
+
     if(!endpoint) return;
     try {
       const response = await axios.get(
@@ -81,8 +135,8 @@ function App() {
       console.log("endpoint ===", endpoint);
       let lis = [];
       
-      for(let i= response.data.length-1 ; i >= 0; i--){ // 내림차순
-      // for(let i=0; i< response.data.length; i++){ // 오름차순
+      // for(let i= response.data.length-1 ; i >= 0; i--){ // 내림차순
+      for(let i=0; i< response.data.length; i++){ // 오름차순
         let json = response.data[i];
         console.log("jsondata =====", json);
         const checklist1 = ['id', 'order_time', 'amount', 'order_status', 'memo'];
@@ -111,14 +165,21 @@ function App() {
           </ul>);
         }
         if(endpoint === "/cafe/payments/check") {
-          lis.push(<ul className='get-server-info'> 
+          lis.push(<ul key={json.id} className='get-server-info'> 
             <h2>주문번호 {json.id}번</h2> 
             <li>메뉴 : {json.name}</li>
             <li>시간 : {json.order_time}</li> 
             <li>가격 : {json.amount}</li> 
             <li>상태 : {json.order_status}</li> 
             <li>요청사항 : {json.memo}</li> 
-            <button>CHECK TO READY</button>
+            <button onClick={(event) => {
+            event.preventDefault();
+            const tempData = {
+              cafeId : cafeId,
+              orderId : json.OrderId,
+            }
+            postCafe("/cafe/payments/post/check", tempData);
+            }}>CHECK TO READY</button>
             </ul>);
         }
         if(endpoint === "/cafe/payments/ready") {
@@ -129,7 +190,14 @@ function App() {
             <li>가격 : {json.amount}</li> 
             <li>상태 : {json.order_status}</li> 
             <li>요청사항 : {json.memo}</li> 
-            <button>READY TO COMPLETE</button>
+            <button onClick={(event) => {
+            event.preventDefault();
+            const tempData = {
+              cafeId : cafeId,
+              orderId : json.OrderId,
+            }
+            postCafe("/cafe/payments/post/ready", tempData);
+            }}>READY TO COMPLETE</button>
             </ul>);
         }
         if(endpoint === "/cafe/payments/complete") {
@@ -148,8 +216,9 @@ function App() {
       
       setCafeMenu(lis);
       console.log("endpoint === ", endpoint);
-      setEndpointStatus(endpoint);
+      endpoint_ = endpoint;
       console.log("cafemenu1", cafeMenu);
+      getStatus();
     } catch (err) {
       console.error(err);
     }
