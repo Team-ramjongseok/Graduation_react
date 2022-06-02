@@ -19,7 +19,7 @@ const es = effectSound(EffectSound, 0.3);
 
 
 
-const url = 'http://localhost:8001';
+const url = 'http://3.38.128.16/api';
 
 const cafeId = 1;
 
