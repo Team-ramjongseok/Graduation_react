@@ -101,15 +101,19 @@ function App() {
         url + '/cafe/payments/status', {params: {cafeId : cafeId}}
       );
 
-      console.log("==========Response==========\n\n", response.data[0], response.data[1]);
+      console.log("==========Response==========\n\n", response.data[0], response.data[1],response.data[2]);
       let tmpArr = [0, 0, 0];
       for(var i =0; i< 3; i++){
-        if(response.data[i].order_status === 'CHECK') {
-          tmpArr[0] = response.data[i].count;
-        } else if (response.data[i].order_status === 'READY'){
-          tmpArr[1] = response.data[i].count;
-        } else {
-          tmpArr[2] = response.data[i].count;
+
+        if(response.data[i]){
+
+          if(response.data[i].order_status === 'CHECK') {
+            tmpArr[0] = response.data[i].count;
+          } else if (response.data[i].order_status === 'READY'){
+            tmpArr[1] = response.data[i].count;
+          } else {
+            tmpArr[2] = response.data[i].count;
+          }
         }
       }
       setOrderStatus(tmpArr);
