@@ -25,7 +25,7 @@ const cafeId = 1;
 
 
 
-const socket = io("http://localhost:8001");
+const socket = io("http://3.38.128.16/api");
 
 
 
